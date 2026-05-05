@@ -189,9 +189,9 @@ if (process.env.NODE_ENV !== "production") {
 // Export for Vercel
 export default app;
 
-// Local listening for dev
-if (process.env.NODE_ENV !== "production") {
-  const PORT = 3000;
+// Start listening (only if not on Vercel)
+if (process.env.NODE_ENV !== "production" || !process.env.VERCEL) {
+  const PORT = Number(process.env.PORT) || 3000;
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
