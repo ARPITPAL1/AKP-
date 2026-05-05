@@ -17,7 +17,10 @@ service cloud.firestore {
 
     // Role check using trusted DB document (Pillar 1)
     function isAdmin() {
-      return isEmailVerified() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+      return isEmailVerified() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        request.auth.token.email in ['arpitpal0412@gmail.com']
+      );
     }
 
     function isValidId(id) {
@@ -61,16 +64,16 @@ service cloud.firestore {
       // Secure List Queries (Pillar 8)
       allow read: if true;
 
-      allow create: if isSignedIn() && isValidArtifact(incoming());
+      allow create: if isAdmin() && isValidArtifact(incoming());
       
-      allow update: if (isAdmin() || (isSignedIn() && existing().authorId == request.auth.uid)) && 
+      allow update: if isAdmin() && 
         isValidArtifact(incoming()) && (
         incoming().authorId == existing().authorId &&
         incoming().createdAt == existing().createdAt &&
         incoming().diff(existing()).affectedKeys().hasOnly(['title', 'period', 'img', 'modelUrl', 'description'])
       );
       
-      allow delete: if isAdmin() || (isSignedIn() && existing().authorId == request.auth.uid);
+      allow delete: if isAdmin();
     }
 
     match /users/{userId} {

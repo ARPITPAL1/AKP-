@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Globe from 'react-globe.gl';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, History, Globe as GlobeIcon, MapPin, Sparkles, Loader2 } from 'lucide-react';
@@ -84,11 +84,9 @@ export const WorldGlobe = () => {
         throw new Error(data.error || "No response from AI");
       }
     } catch (error: any) {
-      console.error("AI Proxy Error:", error);
-      if (error.message === "GEMINI_API_KEY_MISSING") {
-        setAiError("AI integration key missing. Please configure GEMINI_API_KEY in the Secrets panel to enable AI historical insights.");
-      } else if (error.message?.toLowerCase().includes("too many requests")) {
-        setAiError("Our digital scribes are currently at capacity for your region. Please try again later.");
+      console.error("AI History Error:", error);
+      if (error.message?.toLowerCase().includes("quota") || error.message?.toLowerCase().includes("rate limit")) {
+        setAiError("Our digital scribes are currently at capacity. Please try again in a few moments.");
       } else {
         setAiError("The digital library is temporarily unreachable. We couldn't fetch the historical scrolls for this region.");
       }

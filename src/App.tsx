@@ -23,10 +23,11 @@ import {
   LogIn,
   LogOut,
   ShieldCheck,
+  File,
 } from 'lucide-react';
 import { db, auth, handleFirestoreError, OperationType, Artifact } from './lib/firebase';
 import { signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, User } from 'firebase/auth';
-import { collection, onSnapshot, query, orderBy, doc, getDoc, setDoc } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, doc, getDoc, setDoc, Timestamp, serverTimestamp } from 'firebase/firestore';
 import { Canvas } from '@react-three/fiber';
 import { useGLTF, OrbitControls, Stage } from '@react-three/drei';
 import { WorldGlobe } from './components/WorldGlobe';
@@ -887,14 +888,150 @@ const StateHeritageRegistry = () => {
   );
 };
 
+const ADMIN_EMAILS = ['arpitpal0412@gmail.com'];
+
+const AddArtifactModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) => {
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    title: '',
+    period: '',
+    img: '',
+    description: '',
+    modelUrl: ''
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!auth.currentUser) return;
+    
+    setLoading(true);
+    try {
+      const artifactRef = doc(collection(db, 'artifacts'));
+      const artifactData: Artifact = {
+        title: formData.title,
+        period: formData.period,
+        img: formData.img,
+        description: formData.description,
+        modelUrl: formData.modelUrl || undefined,
+        createdAt: serverTimestamp(),
+        authorId: auth.currentUser.uid
+      };
+      
+      await setDoc(artifactRef, artifactData);
+      onClose();
+      setFormData({ title: '', period: '', img: '', description: '', modelUrl: '' });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, 'artifacts');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="absolute inset-0 bg-ink/95 backdrop-blur-xl"
+          />
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            className="relative bg-ink border border-gold/20 w-full max-w-lg p-10 rounded-sm shadow-2xl glass-card max-h-[90vh] overflow-y-auto no-scrollbar"
+          >
+            <button onClick={onClose} className="absolute top-6 right-6 text-text-muted hover:text-gold transition-colors">
+              <X size={24} />
+            </button>
+            
+            <h3 className="text-3xl font-serif text-ivory mb-8 italic tracking-widest uppercase">Add New Artifact</h3>
+            
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div>
+                <label className="block text-[10px] uppercase tracking-widest text-gold font-bold mb-2">Title</label>
+                <input 
+                  required
+                  type="text"
+                  value={formData.title}
+                  onChange={e => setFormData({...formData, title: e.target.value})}
+                  className="w-full bg-ink/40 border border-gold/20 p-4 text-ivory font-serif focus:border-gold outline-none transition-all"
+                  placeholder="The Great Stupa"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] uppercase tracking-widest text-gold font-bold mb-2">Period</label>
+                <input 
+                  required
+                  type="text"
+                  value={formData.period}
+                  onChange={e => setFormData({...formData, period: e.target.value})}
+                  className="w-full bg-ink/40 border border-gold/20 p-4 text-ivory font-serif focus:border-gold outline-none transition-all"
+                  placeholder="3rd Century BC"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] uppercase tracking-widest text-gold font-bold mb-2">Image URL</label>
+                <input 
+                  required
+                  type="url"
+                  value={formData.img}
+                  onChange={e => setFormData({...formData, img: e.target.value})}
+                  className="w-full bg-ink/40 border border-gold/20 p-4 text-ivory font-serif focus:border-gold outline-none transition-all"
+                  placeholder="https://..."
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] uppercase tracking-widest text-gold font-bold mb-2">Model URL (Optional GLB)</label>
+                <input 
+                  type="url"
+                  value={formData.modelUrl}
+                  onChange={e => setFormData({...formData, modelUrl: e.target.value})}
+                  className="w-full bg-ink/40 border border-gold/20 p-4 text-ivory font-serif focus:border-gold outline-none transition-all"
+                  placeholder="https://..."
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] uppercase tracking-widest text-gold font-bold mb-2">Description</label>
+                <textarea 
+                  required
+                  value={formData.description}
+                  onChange={e => setFormData({...formData, description: e.target.value})}
+                  className="w-full bg-ink/40 border border-gold/20 p-4 text-ivory font-serif focus:border-gold outline-none transition-all h-32 resize-none"
+                  placeholder="Enter historical context..."
+                />
+              </div>
+              
+              <button 
+                type="submit"
+                disabled={loading}
+                className="w-full py-4 bg-gold text-ink text-[10px] font-bold uppercase tracking-[0.4em] hover:bg-ivory transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {loading ? <Loader2 className="animate-spin" size={16} /> : 'Archiving to History'}
+              </button>
+            </form>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  );
+};
+
 const Gallery = () => {
   const [artifacts, setArtifacts] = useState<Artifact[]>([]);
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(auth.currentUser);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   useEffect(() => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (u) => setUser(u));
+    
     // Robust query: first get all, then handle sorting and nulls in mapping
     const q = query(collection(db, 'artifacts'), orderBy('createdAt', 'desc'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubscribeDocs = onSnapshot(q, (snapshot) => {
       const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Artifact));
       setArtifacts(docs);
       setLoading(false);
@@ -904,9 +1041,12 @@ const Gallery = () => {
     });
 
     return () => {
-      unsubscribe();
+      unsubscribeAuth();
+      unsubscribeDocs();
     };
   }, []);
+
+  const isAdmin = user?.email && ADMIN_EMAILS.includes(user.email);
 
   return (
     <section id="gallery" className="py-32 md:py-48 bg-ink relative overflow-hidden border-y border-gold/10">
@@ -921,6 +1061,21 @@ const Gallery = () => {
           </p>
           <div className="w-24 h-px bg-gold/40 mx-auto mt-12"></div>
         </div>
+
+        {isAdmin && (
+          <div className="flex justify-center mb-16">
+            <button 
+              onClick={() => setIsAddModalOpen(true)}
+              className="group relative px-10 py-5 border border-gold/40 overflow-hidden transition-all hover:border-gold"
+            >
+              <div className="absolute inset-0 bg-gold translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+              <div className="relative flex items-center gap-3 text-gold group-hover:text-ink transition-colors">
+                <Plus size={18} />
+                <span className="text-[10px] font-bold uppercase tracking-[0.3em]">Curate New Artifact</span>
+              </div>
+            </button>
+          </div>
+        )}
 
         <div className="mt-12">
           {loading ? (
@@ -948,6 +1103,11 @@ const Gallery = () => {
           </button>
         </div>
       </div>
+
+      <AddArtifactModal 
+        isOpen={isAddModalOpen} 
+        onClose={() => setIsAddModalOpen(false)} 
+      />
     </section>
   );
 };
@@ -1149,10 +1309,8 @@ const Blog = () => {
       }
     } catch (err: any) {
       console.error("AI Blog Error:", err);
-      if (err.message === "GEMINI_API_KEY_MISSING") {
-        setError("AI integration key missing. Please configure GEMINI_API_KEY in the Secrets panel.");
-      } else if (err.message?.toLowerCase().includes("too many requests")) {
-        setError("The digital archives are currently busy. Please try again after some time.");
+      if (err.message?.toLowerCase().includes("quota") || err.message?.toLowerCase().includes("rate limit")) {
+        setError("The digital archives are currently at capacity. Please try again after some time.");
       } else {
         setError("The digital scriptorium is temporarily closed. Please try again later.");
       }

@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore, Timestamp } from 'firebase/firestore';
+import { getFirestore, Timestamp, FieldValue } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
@@ -14,7 +14,7 @@ export interface Artifact {
   img: string;
   description?: string;
   modelUrl?: string;
-  createdAt: Timestamp;
+  createdAt: Timestamp | FieldValue;
   authorId: string;
 }
 
