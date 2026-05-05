@@ -1,0 +1,89 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 3. Global Helpers (Primitive Definition)
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isEmailVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    // Role check using trusted DB document (Pillar 1)
+    function isAdmin() {
+      return isEmailVerified() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // 2. Validation Blueprints (Pillar 2)
+    function isValidArtifact(data) {
+      return data.keys().hasAll(['title', 'period', 'img', 'createdAt', 'authorId']) &&
+             data.keys().size() >= 5 && data.keys().size() <= 7 &&
+             data.title is string && data.title.size() <= 200 &&
+             data.period is string && data.period.size() <= 100 &&
+             data.img is string && data.img.size() <= 1000 &&
+             (!('description' in data) || (data.description is string && data.description.size() <= 5000)) &&
+             (!('modelUrl' in data) || (data.modelUrl is string && data.modelUrl.size() <= 1000)) &&
+             data.authorId == request.auth.uid &&
+             data.createdAt == request.time;
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['email', 'fullName', 'createdAt']) &&
+             data.email is string && data.email.size() <= 255 &&
+             data.fullName is string && data.fullName.size() <= 500 &&
+             data.createdAt is timestamp &&
+             (!('role' in data) || (data.role is string && data.role in ['visitor', 'scholar']));
+    }
+
+    function isCreationTimeValid(data) {
+      return data.createdAt == request.time;
+    }
+
+    match /artifacts/{artifactId} {
+      // Secure List Queries (Pillar 8)
+      allow read: if true;
+
+      allow create: if isSignedIn() && isValidArtifact(incoming());
+      
+      allow update: if (isAdmin() || (isSignedIn() && existing().authorId == request.auth.uid)) && 
+        isValidArtifact(incoming()) && (
+        incoming().authorId == existing().authorId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['title', 'period', 'img', 'modelUrl', 'description'])
+      );
+      
+      allow delete: if isAdmin() || (isSignedIn() && existing().authorId == request.auth.uid);
+    }
+
+    match /users/{userId} {
+      allow read: if isSignedIn() && request.auth.uid == userId;
+      allow create: if isSignedIn() && request.auth.uid == userId && isValidUser(incoming()) && isCreationTimeValid(incoming());
+      allow update: if isSignedIn() && request.auth.uid == userId && isValidUser(incoming()) &&
+        incoming().createdAt == existing().createdAt;
+    }
+
+    // Secure Admins collection
+    match /admins/{userId} {
+      allow read: if isSignedIn() && request.auth.uid == userId;
+      allow write: if false; // Only manageable via Firebase Console for security
+    }
+  }
+}

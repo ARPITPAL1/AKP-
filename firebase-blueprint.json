@@ -1,0 +1,50 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A user profile for visitors and scholars.",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "fullName": { "type": "string" },
+        "role": { "type": "string", "enum": ["visitor", "scholar"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "fullName", "createdAt"]
+    },
+    "Artifact": {
+      "title": "Artifact",
+      "description": "A historical artifact showcased in the gallery.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Name of the artifact" },
+        "period": { "type": "string", "description": "Historical era (e.g., 5th Century BC)" },
+        "img": { "type": "string", "description": "URL of the artifact image" },
+        "description": { "type": "string", "description": "Detailed history of the place/artifact" },
+        "modelUrl": { "type": "string", "description": "Optional URL for GLB/GLTF 3D model" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "authorId": { "type": "string", "description": "UID of the professor who posted it" }
+      },
+      "required": ["title", "period", "img", "createdAt", "authorId"]
+    }
+  },
+  "firestore": {
+    "/artifacts/{artifactId}": {
+      "schema": "Artifact",
+      "description": "Collection of gallery artifacts."
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles with biometric data."
+    },
+    "/admins/{userId}": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "email": { "type": "string" }
+        }
+      },
+      "description": "Restricted collection for admin users."
+    }
+  }
+}

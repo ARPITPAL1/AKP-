@@ -1,0 +1,51 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,500;1,600;1,700;1,800;1,900&family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-serif: "Cormorant Garamond", "Playfair Display", serif;
+  --font-sans: "Inter", "Helvetica Neue", ui-sans-serif, system-ui, sans-serif;
+  
+  --color-gold: #c5a059;
+  --color-gold-light: #F1D592;
+  --color-ivory: #f5f2ed;
+  --color-maroon: #2d0a0a;
+  --color-ink: #141414;
+  --color-text-muted: rgba(245, 242, 237, 0.6);
+}
+
+@layer base {
+  body {
+    @apply bg-ink text-ivory font-serif selection:bg-gold selection:text-ink;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif;
+  }
+}
+
+.bg-radial-glow {
+  background: radial-gradient(circle at 70% 30%, rgba(45, 10, 10, 0.4) 0%, transparent 70%);
+}
+
+.luxury-text-gradient {
+  background: linear-gradient(to right, #BF953F, #FCF6BA, #B38728, #FBF5B7, #AA771C);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.border-frame {
+  @apply fixed inset-5 border border-gold/30 pointer-events-none z-50;
+}
+
+.museum-glow {
+  box-shadow: 0 0 30px rgba(197, 160, 89, 0.1);
+}
+
+.glass-card {
+  @apply bg-maroon/30 border border-gold/40 backdrop-blur-sm;
+}
+
+.nav-link {
+  @apply text-[11px] uppercase tracking-[0.2em] text-text-muted transition-colors duration-300;
+}
+
